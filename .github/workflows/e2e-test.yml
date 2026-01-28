@@ -121,7 +121,7 @@ jobs:
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
           TEST_CASES: ${{ steps.get_test_cases.outputs.issue_body }}
         run: |
-          opencode run "
+          opencode run -m openai/gpt-5.2 "
           以下のIssueに記載されたテストケースをagent-browserスキルを使って実行してください。
           **重要**: 必ず録画機能を有効にして実行し、動画を ./e2e-videos/ に保存してください。
 
