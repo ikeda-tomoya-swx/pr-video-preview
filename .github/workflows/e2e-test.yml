@@ -10,6 +10,7 @@ permissions:
   contents: read
   pull-requests: write
   issues: read
+  id-token: write  # OIDC認証に必要
 
 env:
   APP_URL: http://localhost:8080
@@ -143,6 +144,26 @@ jobs:
           7. テスト完了後、成功/失敗を明確に報告
           "
 
+      - name: Configure AWS credentials
+        if: steps.get_issue.outputs.skip != 'true' && always()
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-1
+
+      - name: Upload videos to S3
+        if: steps.get_issue.outputs.skip != 'true' && always()
+        run: |
+          BUCKET_NAME="${{ secrets.AWS_S3_BUCKET_NAME }}"
+          PREFIX="e2e-videos/${{ github.repository }}/${{ github.run_id }}"
+
+          aws s3 cp ./e2e-videos/ s3://${BUCKET_NAME}/${PREFIX}/ \
+            --recursive \
+            --content-type "video/webm"
+
+          echo "S3_PREFIX=${PREFIX}" >> $GITHUB_ENV
+          echo "BUCKET_NAME=${BUCKET_NAME}" >> $GITHUB_ENV
+
       - name: Upload video artifact
         if: steps.get_issue.outputs.skip != 'true' && always()
         uses: actions/upload-artifact@v4
@@ -157,16 +178,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          S3_CONSOLE_URL="https://s3.console.aws.amazon.com/s3/buckets/${BUCKET_NAME}?region=ap-northeast-1&prefix=${S3_PREFIX}/"
 
           if [ "${{ steps.get_issue.outputs.skip }}" == "true" ]; then
             BODY="E2Eテストをスキップしました（紐づくIssueが見つかりません）"
           elif [ "${{ job.status }}" == "success" ]; then
             BODY="✅ E2Eテストが成功しました
-
-          📹 [テスト動画を確認する]($RUN_URL#artifacts)"
+          📹 [テスト動画を確認する (S3)](${S3_CONSOLE_URL})
+          📦 [Artifact]($RUN_URL#artifacts)"
           else
             BODY="❌ E2Eテストが失敗しました
-
-          📹 [テスト動画を確認する]($RUN_URL#artifacts)"
+          📹 [テスト動画を確認する (S3)](${S3_CONSOLE_URL})
+          📦 [Artifact]($RUN_URL#artifacts)"
           fi
           gh pr comment ${{ github.event.issue.number }} --body "$BODY"
