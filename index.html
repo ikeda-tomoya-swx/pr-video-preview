@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>シンプルカウンター</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 2rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    .counter {
+      font-size: 6rem;
+      font-weight: bold;
+      margin: 1rem 0;
+      text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+    }
+    .buttons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    button {
+      padding: 1rem 2rem;
+      font-size: 1.5rem;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      font-weight: bold;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    .decrement {
+      background: #ff6b6b;
+      color: white;
+    }
+    .reset {
+      background: #feca57;
+      color: #333;
+    }
+    .increment {
+      background: #1dd1a1;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>カウンター</h1>
+  <div class="counter" id="count">0</div>
+  <div class="buttons">
+    <button class="decrement" onclick="decrement()">−</button>
+    <button class="reset" onclick="reset()">リセット</button>
+    <button class="increment" onclick="increment()">+</button>
+  </div>
+
+  <script>
+    let count = 0;
+    const countEl = document.getElementById('count');
+
+    function updateDisplay() {
+      countEl.textContent = count;
+    }
+
+    function increment() {
+      count++;
+      updateDisplay();
+    }
+
+    function decrement() {
+      count--;
+      updateDisplay();
+    }
+
+    function reset() {
+      count = 0;
+      updateDisplay();
+    }
+  </script>
+</body>
+</html>
