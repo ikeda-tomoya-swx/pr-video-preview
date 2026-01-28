@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アカウント作成</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .card {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 360px;
+    }
+    h1 { text-align: center; margin-bottom: 1.5rem; color: #333; }
+    input {
+      width: 100%;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    input:focus { outline: none; border-color: #667eea; }
+    button {
+      width: 100%;
+      padding: 0.8rem;
+      background: #1dd1a1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:hover { background: #17b890; }
+    .error { color: #e74c3c; text-align: center; margin-bottom: 1rem; }
+    .link { text-align: center; margin-top: 1rem; }
+    .link a { color: #667eea; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>アカウント作成</h1>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <form method="POST">
+      <input type="text" name="username" placeholder="ユーザー名" required>
+      <input type="password" name="password" placeholder="パスワード" required>
+      <button type="submit">登録</button>
+    </form>
+    <p class="link"><a href="/login">ログインに戻る</a></p>
+  </div>
+</body>
+</html>

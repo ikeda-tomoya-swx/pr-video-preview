@@ -3,23 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>シンプルカウンター</title>
+  <title>カウンター</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
     }
+    .header {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .username { font-size: 0.9rem; }
+    .logout {
+      padding: 0.5rem 1rem;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+    }
+    .logout:hover { background: rgba(255,255,255,0.3); }
     h1 {
       font-size: 2rem;
       margin-bottom: 2rem;
@@ -42,31 +55,21 @@
       border: none;
       border-radius: 12px;
       cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.1s;
+      transition: transform 0.1s;
       font-weight: bold;
     }
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    button:active {
-      transform: translateY(0);
-    }
-    .decrement {
-      background: #ff6b6b;
-      color: white;
-    }
-    .reset {
-      background: #feca57;
-      color: #333;
-    }
-    .increment {
-      background: #1dd1a1;
-      color: white;
-    }
+    button:hover { transform: translateY(-2px); }
+    button:active { transform: translateY(0); }
+    .decrement { background: #ff6b6b; color: white; }
+    .reset { background: #feca57; color: #333; }
+    .increment { background: #1dd1a1; color: white; }
   </style>
 </head>
 <body>
+  <div class="header">
+    <span class="username">{{ username }}</span>
+    <a href="/logout" class="logout">ログアウト</a>
+  </div>
   <h1>カウンター</h1>
   <div class="counter" id="count">0</div>
   <div class="buttons">
@@ -74,29 +77,13 @@
     <button class="reset" onclick="reset()">リセット</button>
     <button class="increment" onclick="increment()">+</button>
   </div>
-
   <script>
     let count = 0;
     const countEl = document.getElementById('count');
-
-    function updateDisplay() {
-      countEl.textContent = count;
-    }
-
-    function increment() {
-      count++;
-      updateDisplay();
-    }
-
-    function decrement() {
-      count--;
-      updateDisplay();
-    }
-
-    function reset() {
-      count = 0;
-      updateDisplay();
-    }
+    function updateDisplay() { countEl.textContent = count; }
+    function increment() { count++; updateDisplay(); }
+    function decrement() { count--; updateDisplay(); }
+    function reset() { count = 0; updateDisplay(); }
   </script>
 </body>
 </html>
