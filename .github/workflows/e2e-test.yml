@@ -56,6 +56,12 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install Japanese fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk fontconfig
+          fc-cache -fv
+
       - name: Install OpenCode and agent-browser
         run: |
           npm install -g opencode-ai@latest agent-browser
@@ -110,6 +116,7 @@ jobs:
       - name: Run E2E test with OpenCode
         if: steps.get_issue.outputs.skip != 'true'
         env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           APP_USERNAME: ${{ secrets.APP_USERNAME }}
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
           TEST_CASES: ${{ steps.get_test_cases.outputs.issue_body }}
