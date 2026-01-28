@@ -1,0 +1,165 @@
+name: E2E Test
+
+on:
+  issue_comment:
+    types: [created]
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+
+env:
+  APP_URL: http://localhost:8080
+
+jobs:
+  e2e-test:
+    # コメントトリガー: PRへの /e2e コメントのみ
+    # merge_group: 常に実行
+    if: |
+      (github.event_name == 'merge_group') ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '/e2e'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'merge_group' && github.ref || '' }}
+
+      # コメントトリガー時はPRのブランチをチェックアウト
+      - name: Checkout PR branch (comment trigger)
+        if: github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.issue.number }}
+          PR_REF=$(gh pr view $PR_NUMBER --json headRefName -q .headRefName)
+          git fetch origin $PR_REF
+          git checkout $PR_REF
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install OpenCode and agent-browser
+        run: |
+          npm install -g opencode-ai@latest agent-browser
+          agent-browser install
+
+      - name: Start Flask application
+        run: |
+          python app.py &
+          sleep 3
+          curl -f $APP_URL || exit 1
+
+      - name: Get linked Issue number
+        id: get_issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" == "merge_group" ]; then
+            # merge_group: PRのbody取得はAPI経由
+            PR_BODY=$(gh pr list --search "${{ github.sha }}" --json body -q '.[0].body // ""')
+          else
+            # issue_comment: PR番号から取得
+            PR_BODY=$(gh pr view ${{ github.event.issue.number }} --json body -q .body)
+          fi
+
+          # Closes #N, Fixes #N, Resolves #N を抽出
+          ISSUE_NUM=$(echo "$PR_BODY" | grep -oP '(?i)(closes?|fixes?|resolves?)\s*#\d+' | grep -oP '\d+' | head -1)
+
+          if [ -z "$ISSUE_NUM" ]; then
+            echo "No linked issue found. Skipping test."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Found linked issue: #$ISSUE_NUM"
+            echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get test cases from Issue
+        if: steps.get_issue.outputs.skip != 'true'
+        id: get_test_cases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_BODY=$(gh issue view ${{ steps.get_issue.outputs.issue_number }} --json body -q .body)
+          echo "issue_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$ISSUE_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create video output directory
+        if: steps.get_issue.outputs.skip != 'true'
+        run: mkdir -p ./e2e-videos
+
+      - name: Run E2E test with OpenCode
+        if: steps.get_issue.outputs.skip != 'true'
+        env:
+          APP_USERNAME: ${{ secrets.APP_USERNAME }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          TEST_CASES: ${{ steps.get_test_cases.outputs.issue_body }}
+        run: |
+          opencode run "
+          以下のIssueに記載されたテストケースをagent-browserスキルを使って実行してください。
+          **重要**: 必ず録画機能を有効にして実行し、動画を ./e2e-videos/ に保存してください。
+
+          ## 環境情報
+          - アプリURL: $APP_URL
+          - ログイン情報: ユーザー名=$APP_USERNAME, パスワード=$APP_PASSWORD
+          - 動画保存先: ./e2e-videos/
+
+          ## テストケース（Issueより）
+          $TEST_CASES
+
+          ## 実行手順
+          1. agent-browserで録画を開始
+          2. アプリにアクセス
+          3. ログイン情報を使ってログイン
+          4. テストケースを順番に実行
+          5. 各ステップの結果を報告
+          6. 録画を終了し、動画を保存
+          7. テスト完了後、成功/失敗を明確に報告
+          "
+
+      - name: Upload video artifact
+        if: steps.get_issue.outputs.skip != 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-video-${{ github.run_id }}
+          path: ./e2e-videos/
+          retention-days: 30
+
+      - name: Post result to PR
+        if: github.event_name == 'issue_comment' && always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ "${{ steps.get_issue.outputs.skip }}" == "true" ]; then
+            BODY="E2Eテストをスキップしました（紐づくIssueが見つかりません）"
+          elif [ "${{ job.status }}" == "success" ]; then
+            BODY="✅ E2Eテストが成功しました
+
+          📹 [テスト動画を確認する]($RUN_URL#artifacts)"
+          else
+            BODY="❌ E2Eテストが失敗しました
+
+          📹 [テスト動画を確認する]($RUN_URL#artifacts)"
+          fi
+          gh pr comment ${{ github.event.issue.number }} --body "$BODY"
